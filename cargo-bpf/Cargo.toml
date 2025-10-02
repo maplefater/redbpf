@@ -20,7 +20,7 @@ required-features = ["command-line"]
 
 [dependencies]
 clap = { version = "2.33", optional = true }
-bindgen = {version = "0.59.2", default-features = false, features = ["runtime"], optional = true}
+bindgen = {version = "0.72", default-features = false, features = ["runtime"], optional = true}
 toml_edit = { version = "0.2", optional = true }
 libbpf-sys = { version = "0.6.2", optional = true }
 bpf-sys = { version = "2.3.0", path = "../bpf-sys", optional = true }
@@ -38,7 +38,7 @@ glob = "0.3"
 anyhow = "1.0"
 # if `strict-versioning` feature is off, llvm-sys-130 can be linked to
 # libLLVM13 and newer libraries.
-llvm-sys-130 = { version = "130", optional = true, package = "llvm-sys" }
+llvm-sys-201 = { version = "201", optional = true, package = "llvm-sys"}
 cfg-if = "1.0"
 rustversion = "1.0"
 rustc_version = "0.4.0"
@@ -53,11 +53,10 @@ cfg-if = "1.0.0"
 default = ["command-line", "llvm-sys"]
 bindings = ["libbpf-sys", "bpf-sys", "bindgen", "syn", "quote", "proc-macro2", "tempfile"]
 build = ["bindings", "libc", "toml_edit", "redbpf"]
-docsrs-llvm = ["llvm-sys-130/no-llvm-linking", "llvm-sys-130/disable-alltargets-init"]
+docsrs-llvm = ["llvm-sys-201/no-llvm-linking", "llvm-sys-201/disable-alltargets-init"]
 build-c = []
 command-line = ["build", "clap", "redbpf/load", "futures", "tokio", "hexdump"]
-llvm-sys = ["llvm-sys-130"]  # Use current default LLVM version or higher
-llvm13 = ["llvm-sys-130"]
+llvm-sys = ["llvm-sys-201"]  # Use current default LLVM version or higher
 
 [package.metadata.docs.rs]
 all-features = false

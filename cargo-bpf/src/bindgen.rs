@@ -6,7 +6,7 @@
 // copied, modified, or distributed except according to those terms.
 
 pub use bindgen::Builder;
-use bindgen::{self, callbacks::ParseCallbacks};
+use bindgen::{self, callbacks::{ItemInfo, ParseCallbacks}};
 use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
@@ -133,9 +133,9 @@ pub use generated_bindings::*;
 struct Callbacks;
 
 impl ParseCallbacks for Callbacks {
-    fn item_name(&self, name: &str) -> Option<String> {
-        match name {
-            "u8" | "u16" | "u32" | "u64" => Some(format!("_cargo_bpf_{}", name)),
+    fn item_name(&self, info: ItemInfo<'_>) -> Option<String> {
+        match info.name {
+            "u8" | "u16" | "u32" | "u64" => Some(format!("_cargo_bpf_{}", info.name)),
             _ => None,
         }
     }

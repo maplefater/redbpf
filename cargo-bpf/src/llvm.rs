@@ -19,13 +19,7 @@ This problem occurs because `cargo-bpf` executes `rustc` to emit bitcode first
 and then calls LLVM API directly to parse and optimize the emitted bitcode
 second.
 */
-cfg_if::cfg_if! {
-    if #[cfg(feature = "llvm-sys-130")] {
-        use llvm_sys_130 as llvm_sys;
-    } else {
-        compile_error!("Specify --features llvm13");
-    }
-}
+use llvm_sys_201 as llvm_sys;
 use anyhow::{anyhow, Result};
 use llvm_sys::bit_writer::LLVMWriteBitcodeToFile;
 use llvm_sys::core::*;
@@ -35,8 +29,6 @@ use llvm_sys::prelude::*;
 use llvm_sys::support::LLVMParseCommandLineOptions;
 use llvm_sys::target::*;
 use llvm_sys::target_machine::*;
-use llvm_sys::transforms::ipo::LLVMAddAlwaysInlinerPass;
-use llvm_sys::transforms::pass_manager_builder::*;
 use llvm_sys::{LLVMAttributeFunctionIndex, LLVMInlineAsmDialect::*};
 use llvm_sys::{LLVMOpcode, LLVMTypeKind, LLVMValueKind};
 use std::ffi::{CStr, CString};
@@ -121,7 +113,7 @@ unsafe fn inject_exit_call(context: LLVMContextRef, func: LLVMValueRef, builder:
     let last = LLVMGetLastInstruction(block);
     LLVMPositionBuilderBefore(builder, last);
     let c_str = CString::new("").unwrap();
-    LLVMBuildCall(builder, exit, ptr::null_mut(), 0, c_str.as_ptr());
+    LLVMBuildCall2(builder, exit_sig, exit, ptr::null_mut(), 0, c_str.as_ptr());
 }
 
 /// Find debugger intrinsics handling methods of RedBPF maps. The the type
@@ -539,45 +531,9 @@ unsafe fn compile_module(
     let data_layout = LLVMCreateTargetDataLayout(tm);
     LLVMSetModuleDataLayout(module, data_layout);
 
-    let fpm = LLVMCreateFunctionPassManagerForModule(module);
     let mpm = LLVMCreatePassManager();
 
-    LLVMAddAnalysisPasses(tm, fpm);
     LLVMAddAnalysisPasses(tm, mpm);
-
-    // we annotate all functions as always-inline so that we can force-inline
-    // them with the always inliner pass
-    LLVMAddAlwaysInlinerPass(mpm);
-
-    // NOTE: we should call LLVMAddTargetLibraryInfo() here but there's no way
-    // to retrieve the library info for the BPF target using the C API
-
-    // add all the other passes
-    let pmb = LLVMPassManagerBuilderCreate();
-    LLVMPassManagerBuilderSetOptLevel(pmb, 3);
-    LLVMPassManagerBuilderSetSizeLevel(pmb, 0);
-
-    // We already added the AlwaysInliner pass. Ideally we want to set
-    // PMB->Inliner = AlwaysInliner but that's not possible with the C API. So
-    // here we add _another_ inliner pass that won't actually inline anything,
-    // but will cause the PMB to add extra optimization passes that are only
-    // turned on if inlining is configured.
-    LLVMPassManagerBuilderUseInlinerWithThreshold(pmb, 275);
-
-    // populate the pass managers
-    LLVMPassManagerBuilderPopulateFunctionPassManager(pmb, fpm);
-    LLVMPassManagerBuilderPopulateModulePassManager(pmb, mpm);
-
-    // run function passes
-    LLVMInitializeFunctionPassManager(fpm);
-    let mut func = LLVMGetFirstFunction(module);
-    while !func.is_null() {
-        if LLVMIsDeclaration(func) == 0 {
-            LLVMRunFunctionPassManager(fpm, func);
-        }
-        func = LLVMGetNextFunction(func);
-    }
-    LLVMFinalizeFunctionPassManager(fpm);
 
     // run module passes
     LLVMRunPassManager(mpm, module);
@@ -609,8 +565,6 @@ unsafe fn compile_module(
         ));
     }
 
-    LLVMPassManagerBuilderDispose(pmb);
-    LLVMDisposePassManager(fpm);
     LLVMDisposePassManager(mpm);
     LLVMDisposeTargetMachine(tm);
 
