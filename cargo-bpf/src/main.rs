@@ -131,7 +131,7 @@ $ sudo cargo bpf load -i eth0 target/bpf/programs/block_http.elf
 ```
 
 */
-use clap::{self, crate_authors, crate_version, App, AppSettings, Arg, SubCommand};
+use clap::{self, crate_version, App, AppSettings, Arg, SubCommand};
 use std::path::PathBuf;
 
 use cargo_bpf::BuildOptions;
@@ -150,7 +150,6 @@ fn main() {
             .subcommand(
                 SubCommand::with_name("bpf")
                     .version(format!("{} (with LLVM {})", crate_version!(), env!("CARGO_BPF_LLVM_VERSION")).as_str())
-                    .author(crate_authors!("\n"))
                     .about("A cargo subcommand for developing eBPF programs")
                     .settings(&[
                         AppSettings::SubcommandRequiredElseHelp
