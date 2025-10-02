@@ -49,9 +49,9 @@ lazy_static! {
             "-Wno-gnu-variable-sized-type-not-at-end",
         ];
 
-        if cfg!(x86_64) {
+        if cfg!(target_arch = "x86_64") {
             flags.push("-D__ASM_SYSREG_H");
-        } else if cfg!(aarch64) {
+        } else if cfg!(target_arch = "aarch64") {
             flags.push("-target");
             flags.push("aarch64");
         }
